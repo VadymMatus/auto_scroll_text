@@ -253,6 +253,7 @@ class _AutoScrollTextState extends State<AutoScrollText> {
   String? _endlessText;
   double? _originalTextWidth;
   Timer? _timer;
+  Timer? _delayTimer; // Timer to handle delay before animation
   bool _running = false;
   int _counter = 0;
   @override
@@ -276,6 +277,7 @@ class _AutoScrollTextState extends State<AutoScrollText> {
 
   @override
   void dispose() {
+    _delayTimer?.cancel();
     _timer?.cancel();
     super.dispose();
   }
@@ -318,18 +320,19 @@ class _AutoScrollTextState extends State<AutoScrollText> {
   }
 
   Future<void> _initScroll(_) async {
-    await _delayBeforeStartAnimation();
-    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (!_available) {
-        timer.cancel();
-        return;
-      }
-      final int? maxReps = widget.numberOfReps;
-      if (maxReps != null && _counter >= maxReps) {
-        timer.cancel();
-        return;
-      }
-      if (!_running) _runAnimation();
+    _delayTimer = Timer(widget.delayBefore ?? Duration.zero, () {
+      _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+        if (!_available) {
+          timer.cancel();
+          return;
+        }
+        final int? maxReps = widget.numberOfReps;
+        if (maxReps != null && _counter >= maxReps) {
+          timer.cancel();
+          return;
+        }
+        if (!_running) _runAnimation();
+      });
     });
   }
 
@@ -406,12 +409,6 @@ class _AutoScrollTextState extends State<AutoScrollText> {
     if (widget.pauseBetween != null) {
       await Future<dynamic>.delayed(widget.pauseBetween!);
     }
-  }
-
-  Future<void> _delayBeforeStartAnimation() async {
-    final Duration? delayBefore = widget.delayBefore;
-    if (delayBefore == null) return;
-    await Future<dynamic>.delayed(delayBefore);
   }
 
   Duration _getDuration(double extent) {
